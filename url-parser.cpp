@@ -325,6 +325,30 @@ public:
     }
 };
 
+class Capture : public Parser {
+    const Parser& p;
+    const string tag;
+
+public:
+    Capture(const Parser& p_, const string& tag_) :
+        p(p_),
+        tag(tag_)
+    {}
+    
+    bool parse(ParseState& in) const {
+        int pos = in.getPos();
+        bool r = p.doParse(in);
+        if (r)
+            cout << tag << ": " << in.substr(pos, in.getPos()) << "\n";
+        return r;
+    }
+
+    static const string id;
+    const string& name() const {
+        return id;
+    }
+};
+
 const string Null::id("Null");
 const string Fail::id("Fail");
 const string End::id("End");
@@ -335,6 +359,8 @@ const string Optional::id("Optional");
 const string Any::id("Any");
 const string None::id("None");
 const string Repeat::id("Repeat");
+const string Capture::id("Capture");
+
 
 ///////////////////////////////////////////////
 // Test Code
@@ -357,6 +383,7 @@ Or scheme(amqp, amqps);
 Literal schemeterm("://");
 And schemepart(scheme, schemeterm);
 Optional oschemepart(schemepart);
+Capture coschemepart(oschemepart, "schemepart");
 
 Literal at('@');
 Literal slash('/');
@@ -366,6 +393,7 @@ And passpart(slash, password);
 Optional opasspart(passpart);
 And userpart(username, opasspart, at);
 Optional ouserpart(userpart);
+Capture couserpart(ouserpart, "userpart");
 
 Literal colon(':');
 Repeat host(hostchars, 1);
@@ -373,8 +401,8 @@ Repeat port(digit, 1, 5);
 And portpart(colon, port);
 Optional oportpart(portpart);
 And hostpart(host, oportpart);
-
-And url(oschemepart, ouserpart, hostpart, end);
+Capture chostpart(hostpart, "hostpart");
+And url(coschemepart, couserpart, chostpart, end);
 
 int main() {
     cout << boolalpha;
