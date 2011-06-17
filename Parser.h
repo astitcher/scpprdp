@@ -5,7 +5,6 @@
 #include <iostream>
 #include <string>
 #include <limits>
-#include <list>
 
 using std::cin;
 using std::cout;
@@ -16,8 +15,6 @@ using std::ostream;
 using std::string;
 
 using std::numeric_limits;
-
-using std::list;
 
 class Parser;
 
@@ -65,43 +62,70 @@ public:
     }
 };
 
-class ParseEnv;
-
-class ParseCapture {
+struct ParseCapture {
     const string tag; // Capture name
     unsigned s; // start position
     unsigned e; // end position
-    ParseEnv* subEnv;
+    ParseCapture* subEnv;
+    ParseCapture* next;
 
-public:
     ParseCapture(const string& tag_, unsigned s_, unsigned e_);
-    ParseCapture(const string& tag_, unsigned s_, unsigned e_, ParseEnv& env_);
+    ParseCapture(const string& tag_, unsigned s_, unsigned e_, ParseCapture* subEnv_);
+    ~ParseCapture();
+
     void out(ostream& o, const ParseSource& ps, int indent = 0);
+
+    // No copying, no assignment
+private:
+    ParseCapture(const ParseCapture&);
+    ParseCapture& operator=(const ParseCapture&);
 };
 
 class ParseEnv {
-    list<ParseCapture> env;
+    ParseCapture* env;
+    ParseCapture** env_tail;
 
 public:
+    ParseEnv() :
+        env(0),
+        env_tail(&env)
+    {}
+
+    ~ParseEnv() {
+        delete env;
+    }
+    
     bool empty() {
-        return env.empty();
+        return env == 0;
     }
 
     void add(const string& tag, unsigned s, unsigned e) {
-        env.push_front(ParseCapture(tag, s, e));
+        ParseCapture* pc = new ParseCapture(tag, s, e);
+        cout << pc << "->" << env_tail << "-" << (*env_tail) << "\n";
+        *env_tail = pc;
+        env_tail = &(pc->next);
     }
 
     void add(const string& tag, unsigned s, unsigned e, ParseEnv& en) {
-        env.push_front(ParseCapture(tag, s, e, en));
+        ParseCapture* pc = new ParseCapture(tag, s, e, en.env);
+        cout << pc << "->" << env_tail << "-" << (*env_tail) << "\n";
+        en.env = 0; // Take ownership of captures And clear
+        en.env_tail = &en.env;
+        *env_tail = pc;
+        env_tail = &(pc->next);
     }
 
-    void add(ParseEnv& pe) {
-        env.splice(env.begin(), pe.env);
+    void add(ParseEnv& en) {
+        *env_tail = en.env;
+        env_tail = en.env_tail;
+        en.env = 0; // Take ownership & clear
+        en.env_tail = &en.env;
     }
 
     void out(ostream& o, const ParseSource& ps, int indent = 0) {
-        for (list<ParseCapture>::iterator it=env.begin(); it!=env.end(); ++it) {
-            it->out(o, ps, indent); o << "\n";
+        if (env) {
+            env->out(o, ps, indent);
+            o << "\n";
         }
     }
 };
@@ -110,16 +134,21 @@ ParseCapture::ParseCapture(const string& tag_, unsigned s_, unsigned e_) :
     tag(tag_),
     s(s_),
     e(e_),
-    subEnv(0)
+    subEnv(0),
+    next(0)
 {}
 
-ParseCapture::ParseCapture(const string& tag_, unsigned s_, unsigned e_, ParseEnv& env_) :
+ParseCapture::ParseCapture(const string& tag_, unsigned s_, unsigned e_, ParseCapture* env_) :
     tag(tag_),
     s(s_),
     e(e_),
-    subEnv(new ParseEnv)    
-{
-    subEnv->add(env_);
+    subEnv(env_),
+    next(0)
+{}
+
+ParseCapture::~ParseCapture() {
+    delete subEnv;
+    delete next;
 }
 
 void ParseCapture::out(ostream& o, const ParseSource& ps, int indent) {
@@ -131,8 +160,11 @@ void ParseCapture::out(ostream& o, const ParseSource& ps, int indent) {
         subEnv->out(o, ps, indent+1);
         o << string(indent, ' ') << "]";
     } else {
-        o << "]";
+        o << "]\n";
     }
+    // Tail recurse to print rest of captures
+    if (next)
+        next->out(o, ps, indent);
 }
 
 class Parser {
@@ -158,14 +190,19 @@ public:
             // Only add the parsed environment if parse succeeded
             if (capture) {
                 if (en.empty()) {
+                    cout << captureTag << ":" << s << "," << e << "\n";
                     env.add(captureTag, s, e);
                 } else {
+                    cout << captureTag << ":" << s << "," << e << "\n";
+                    en.out(cout, in, 6);
                     env.add(captureTag, s, e, en);
                 }
             } else {
+                en.out(cout, in, 4);
                 env.add(en);
             }
         }
+        en.out(cout, in, 2);
         return r;
     }
 
