@@ -53,6 +53,7 @@ bool Parser::doParse(ParseSource& in, ParseEnv& env) const {
 const string Null::id("Null");
 const string Fail::id("Fail");
 const string End::id("End");
+const string Name::id("Name");
 const string Literal::id("Literal");
 const string And::id("And");
 const string Or::id("Or");
@@ -71,6 +72,10 @@ bool Fail::parse(ParseSource&, ParseEnv&) const {
 
 bool End::parse(ParseSource& in, ParseEnv&) const {
   return in.atEnd();
+}
+
+bool Name::parse(ParseSource& in, ParseEnv& env) const {
+  return p.doParse(in, env);
 }
 
 bool Literal::parse(ParseSource& in, ParseEnv&) const {
@@ -148,6 +153,12 @@ void Fail::print(ostream& o) const {
 
 void End::print(ostream& o) const {
 	o << "$";
+}
+
+void Name::print(ostream& o) const {
+	o << name << "::=";
+	p.doPrint(o);
+	o << "\n";
 }
 
 void Literal::print(ostream& o) const {

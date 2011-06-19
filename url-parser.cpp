@@ -35,6 +35,7 @@ Or scheme(amqps, amqp);
 Or schemeterm(urlschemeterm, colon);
 And schemepart(scheme, schemeterm);
 Optional oschemepart(schemepart);
+Name noschemepart("schemepart", oschemepart);
 
 Repeat username(idchars, 1);
 Repeat password(idchars, 1);
@@ -42,6 +43,7 @@ And passpart(slash, password);
 Optional opasspart(passpart);
 And userpart(username, opasspart, at);
 Optional ouserpart(userpart);
+Name nouserpart("userpart", ouserpart);
 
 Or protocol(tcp, ssl, rdma, ib, unx);
 Repeat rehost(hostchars, 1);
@@ -58,7 +60,9 @@ Or endpoint(protocolhostport, hostport, protocolhost, host);
 And endpointlistel(comma, endpoint);
 Repeat endpointlist(endpointlistel, 0);
 And endpoints(endpoint, endpointlist);
-And url(oschemepart, ouserpart, endpoints, end);
+Name nendpoints("endpoints", endpoints);
+
+And url(noschemepart, nouserpart, nendpoints, end);
 
 int main() {
     // Set up captures

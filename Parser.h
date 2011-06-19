@@ -190,6 +190,23 @@ extern Parser& null;
 extern Parser& fail;
 extern Parser& end;
 
+// This is mostly useful for printing nicely
+class Name : public Parser {
+    static const std::string id;
+
+    const std::string name;
+    const Parser& p;
+public:
+    Name(const std::string& name_, const Parser& p_) :
+    	Parser(id),
+    	name(name_),
+    	p(p_)
+    {}
+
+    void print(std::ostream& o) const;
+    bool parse(ParseSource& in, ParseEnv& env) const;
+};
+
 class Literal : public Parser {
     static const std::string id;
 
