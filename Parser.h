@@ -55,6 +55,7 @@ class Parser {
 
     virtual bool parse(ParseSource& in, ParseEnv& env) const = 0;
     virtual void print(std::ostream& o, std::set<Parser const*>& notParsed) const = 0;
+    virtual bool isCompound() const;
 
 protected:
     Parser(const std::string& id_);
@@ -67,6 +68,13 @@ public:
     bool doParse(ParseSource& in, ParseEnv& env) const;
     Parser& Capture(const std::string& tag);
     Parser& Name(const std::string& name);
+};
+
+class CompoundParser : public Parser {
+    bool isCompound() const;
+
+protected:
+    CompoundParser(const std::string& id);
 };
 
 inline ParseSource::ParseSource(const std::string& s) :
@@ -160,6 +168,10 @@ inline Parser& Parser::Name(const std::string& name) {
     return *this;
 }
 
+inline CompoundParser::CompoundParser(const std::string& id) :
+    Parser(id) {
+}
+
 class Null : public Parser {
     static const std::string id;
 public:
@@ -219,7 +231,7 @@ public:
     bool parse(ParseSource& in, ParseEnv& env) const;
 };
 
-class And : public Parser {
+class And : public CompoundParser {
     static const std::string id;
 
     const Parser& p1;
@@ -237,7 +249,7 @@ public:
         const Parser& p5_=null,
         const Parser& p6_=null
        ) :
-        Parser(id),
+        CompoundParser(id),
         p1(p1_),
         p2(p2_),
         p3(p3_),
@@ -250,7 +262,7 @@ public:
     bool parse(ParseSource& in, ParseEnv& env) const;
 };
 
-class Or : public Parser {
+class Or : public CompoundParser {
     static const std::string id;
 
     const Parser& p1;
@@ -268,7 +280,7 @@ public:
        const Parser& p5_=fail,
        const Parser& p6_=fail
       ) :
-        Parser(id),
+        CompoundParser(id),
         p1(p1_),
         p2(p2_),
         p3(p3_),
@@ -281,14 +293,14 @@ public:
     bool parse(ParseSource& in, ParseEnv& env) const;
 };
 
-class Optional : public Parser {
+class Optional : public CompoundParser {
     static const std::string id;
 
     const Parser& p;
 
 public:
     Optional(const Parser& p_) :
-        Parser(id),
+        CompoundParser(id),
         p(p_)
     {}
 
@@ -341,7 +353,7 @@ public:
     bool parse(ParseSource& in, ParseEnv& env) const;
 };
 
-class Repeat : public Parser {
+class Repeat : public CompoundParser {
     static const std::string id;
 
     const Parser& p;
@@ -350,7 +362,7 @@ class Repeat : public Parser {
 
 public:
     Repeat(const Parser& p_, int min_, int max_ = std::numeric_limits<int>::max()) :
-        Parser(id),
+        CompoundParser(id),
         p(p_),
         min(min_),
         max(max_)

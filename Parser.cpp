@@ -27,6 +27,14 @@ void ParseCapture::out(ostream& o, const ParseSource& ps, int indent) {
     }
 }
 
+bool Parser::isCompound() const {
+    return false;
+}
+
+bool CompoundParser::isCompound() const {
+    return true;
+}
+
 void Parser::doPrint(ostream& o) const {
     set<Parser const*> printed;
     set<Parser const*> toParse;
@@ -57,20 +65,33 @@ void Parser::doPrint(ostream& o, std::set< Parser const* >& notParsed) const {
 }
 
 bool Parser::doParse(ParseSource& in, ParseEnv& env) const {
-    unsigned s =in.getPos();
-    ParseEnv en;
-    bool r = parse(in, en);
-    unsigned e =in.getPos();
-    if (r) {
-        // Only add the parsed environment if parse succeeded
-        if (capture) {
-            if (en.empty()) {
-                env.add(captureTag, s, e);
+    bool r;
+    if (isCompound()) {
+        unsigned s =in.getPos();
+        ParseEnv en;
+        r = parse(in, en);
+        unsigned e =in.getPos();
+        if (r) {
+            // Only add the parsed environment if parse succeeded
+            if (capture) {
+                if (en.empty()) {
+                    env.add(captureTag, s, e);
+                } else {
+                    env.add(captureTag, s, e, en);
+                }
             } else {
-                env.add(captureTag, s, e, en);
+                env.add(en);
             }
-        } else {
-            env.add(en);
+        }
+    } else {
+        unsigned s =in.getPos();
+        r = parse(in, env);
+        unsigned e =in.getPos();
+        if (r) {
+            // Only add the parsed environment if parse succeeded
+            if (capture) {
+                env.add(captureTag, s, e);
+            }
         }
     }
     return r;
